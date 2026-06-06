@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = "https://inventory-pro-backend-2ut3.onrender.com/api";
+const API_URL = "https://inventory-pro-backend-gm00.onrender.com/api";
 // Create axios instance
 export const api = axios.create({
   baseURL: API_URL,
