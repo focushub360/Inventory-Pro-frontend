@@ -42,9 +42,9 @@ const Layout = ({ isSuperAdmin }) => {
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900">
       <Sidebar isSuperAdmin={isSuperAdmin} />
       
-      <main className={`min-h-screen flex flex-col transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+      <main className={`min-h-screen flex flex-col transition-[margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-40 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl border-b border-surface-200 dark:border-surface-700">
+        <header className={`fixed top-0 right-0 left-0 z-40 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl border-b border-surface-200 dark:border-surface-700 transition-[left] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isCollapsed ? 'lg:left-20' : 'lg:left-64'}`}>
           <div className="flex items-center justify-between px-4 lg:px-8 py-4">
             {/* Left side - Mobile menu button and page title */}
             <div className="flex items-center gap-4">
@@ -118,6 +118,9 @@ const Layout = ({ isSuperAdmin }) => {
             </div>
           </div>
         </header>
+
+        {/* Preserve the fixed header's space in the page layout. */}
+        <div className="h-[73px] shrink-0" aria-hidden="true" />
         
         {/* Main Content */}
         <div className="flex-1 p-4 lg:p-8">

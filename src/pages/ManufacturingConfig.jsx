@@ -12,12 +12,16 @@ const getWorkflowType = (stages = []) => `${Math.max(stages.length, 1)}-step`;
 
 const renumberStages = (stages = []) =>
   stages.map((stage, index) => ({
+    ...stage,
     stageNumber: index + 1,
     stageName: /^Stage \d+$/.test(stage.stageName || '') ? `Stage ${index + 1}` : stage.stageName,
     stageType: index === 0 ? 'manufacturing' : stage.stageType || 'processing',
     description: stage.description,
     requiresValidation: Boolean(stage.requiresValidation)
   }));
+
+const stripDerivedStageContext = (stages = []) =>
+  stages.map(({ productionLine, reportType, processKey, processName, partKey, partName, ...stage }) => stage);
 
 const ManufacturingConfig = () => {
   const navigate = useNavigate();
@@ -128,7 +132,7 @@ const ManufacturingConfig = () => {
       const payload = {
         productName: formData.productName,
         workflowType: getWorkflowType(formData.stages),
-        stages: renumberStages(formData.stages)
+        stages: stripDerivedStageContext(renumberStages(formData.stages))
       };
 
       if (editingConfig) {
@@ -422,7 +426,8 @@ const ManufacturingConfig = () => {
                     <div className="mt-2">
                       <div className="space-y-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700">
                         {formData.stages.map((stage, index) => (
-                          <div key={stage.stageNumber} className="flex min-w-0 items-center gap-3">
+                          <div key={stage.stageNumber} className="grid min-w-0 gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-600">
+                            <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
                               {stage.stageNumber}
                             </div>
@@ -461,6 +466,7 @@ const ManufacturingConfig = () => {
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               )}
+                            </div>
                             </div>
                           </div>
                         ))}
@@ -525,6 +531,3 @@ const ManufacturingConfig = () => {
 };
 
 export default ManufacturingConfig;
-
-
-

@@ -377,9 +377,6 @@ const ProductModal = ({
     brandName: product?.brandName || '',
     model: product?.model || '',
 
-    // REQUIRED for production generation
-    numberOfItems: product?.numberOfItems ?? '',
-
     category: product?.category?._id || product?.category || '',
     subcategory: product?.subcategory?._id || product?.subcategory || '',
   });
@@ -471,21 +468,6 @@ const ProductModal = ({
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 placeholder="Auto-generated if empty"
                 className="w-full px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
-              />
-            </div>
-
-            {/* REQUIRED UI FIELD */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Number of Items
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={formData.numberOfItems}
-                onChange={(e) => setFormData({ ...formData, numberOfItems: e.target.value })}
-                className="w-full px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
-                required
               />
             </div>
             {(
@@ -702,6 +684,9 @@ const Products = () => {
   const productColumnMap = {
     productname: 'productName',
     producname: 'productName',
+    partdetails: 'productName',
+    partdetail: 'productName',
+    partname: 'productName',
     name: 'productName',
     description: 'description',
     code: 'code',
@@ -875,9 +860,21 @@ const Products = () => {
   };
 
   useEffect(() => {
-    fetchCategoriesList();
-    fetchSubcategoriesList();
-  }, []);
+    const loadProductTaxonomy = async () => {
+      setLoadingCategories(true);
+      setLoadingSubcategories(true);
+      try {
+        await Promise.all([fetchCategoriesList(), fetchSubcategoriesList()]);
+      } catch (error) {
+        toast.error('Failed to load product taxonomy');
+      } finally {
+        setLoadingCategories(false);
+        setLoadingSubcategories(false);
+      }
+    };
+
+    loadProductTaxonomy();
+  }, [isAdmin]);
 
   // Fetch products when search/filter changes
   useEffect(() => {
@@ -1037,6 +1034,7 @@ const Products = () => {
         subcategory: formData.subcategory || null,
         withQRCode: Boolean(options.createQRCode),
       };
+      delete dataToSend.numberOfItems;
 
       if (editingProduct) {
         await productAPI.update(editingProduct._id, dataToSend);
@@ -1458,5 +1456,3 @@ const Products = () => {
 }
 
 export default Products;
-
-

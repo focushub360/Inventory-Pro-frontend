@@ -15,43 +15,66 @@ const normalizeCount = (v) => {
  * Choice fields capture count per selected option; free-form fields capture one count per answer.
  */
 const QuestionCountGrid = ({ forms = [], values, onChange }) => {
+  const commitChange = (updater) => {
+    if (typeof onChange !== 'function') return;
+    onChange((previousValues) => updater(previousValues || values || {}));
+  };
+
   const update = (question, index, answer, prefix) => {
     const questionId = idOf(question, index, prefix);
-    onChange({
-      ...values,
+    commitChange((currentValues) => ({
+      ...currentValues,
       [questionId]: {
         questionId,
         question: textOf(question),
         type: typeOf(question),
         answer
       }
-    });
+    }));
   };
 
-  const updateCount = (question, optionKey, count) => {
-    const questionId = idOf(question, 0, 'question');
+  const updateCount = (question, index, optionKey, count, prefix, option = {}, lineage = {}) => {
+    const questionId = idOf(question, index, prefix);
     // store per-question per-option counts under special key
     const countKey = `${questionId}::__count__::${optionKey}`;
-    onChange({
-      ...values,
-      [countKey]: {
-        questionId,
-        question: textOf(question),
-        type: 'count',
-        optionKey,
-        answer: normalizeCount(count)
-      }
+    commitChange((currentValues) => {
+      const current = currentValues?.[countKey] || {};
+      return {
+        ...currentValues,
+        [countKey]: {
+          ...current,
+          questionId,
+          question: textOf(question),
+          type: 'count',
+          optionKey,
+          answer: normalizeCount(count),
+          rootQuestion: lineage.rootQuestion || textOf(question),
+          parentOption: lineage.parentOption || (optionKey === RESPONSE_COUNT_KEY ? '' : option.label || option.value || optionKey),
+          subQuestion: lineage.subQuestion || '',
+          subOption: lineage.subQuestion && optionKey !== RESPONSE_COUNT_KEY
+            ? option.label || option.value || optionKey
+            : lineage.subOption || '',
+          defectDetail: lineage.subQuestion && optionKey !== RESPONSE_COUNT_KEY
+            ? option.label || option.value || optionKey
+            : textOf(question) || option.defectType || option.defectDetail || current.defectDetail || '',
+          assemblyProcess: option.assemblyProcess || question.assemblyProcess || current.assemblyProcess || '',
+          defectType: lineage.subQuestion && optionKey !== RESPONSE_COUNT_KEY
+            ? option.label || option.value || optionKey
+            : textOf(question) || option.defectType || option.defectDetail || current.defectType || ''
+        }
+      };
     });
   };
 
-  const getCount = (question, optionKey) => {
-    const questionId = idOf(question, 0, 'question');
+  const getCount = (question, index, optionKey, prefix) => {
+    const questionId = idOf(question, index, prefix);
     const countKey = `${questionId}::__count__::${optionKey}`;
     return normalizeCount(values?.[countKey]?.answer);
   };
 
-  const renderQuestion = (question, index, level = 0, prefix = 'question', branchLabel = '') => {
+  const renderQuestion = (question, index, level = 0, prefix = 'question', branchLabel = '', lineage = {}) => {
     const questionId = idOf(question, index, prefix);
+    const isSubQuestion = level > 0;
     const typeRaw = typeOf(question);
     const type = String(typeRaw ?? '').trim();
     const normalizedType = type.toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
@@ -92,16 +115,50 @@ const QuestionCountGrid = ({ forms = [], values, onChange }) => {
 
     const isSingle = isRadio || isSelect || (hasOptions && !isMulti);
 
-    const renderCountInput = (optionKey) => (
+    const renderCountInput = (optionKey, option = {}, className = '') => (
       <input
         type="number"
         min={0}
-        value={getCount(question, optionKey)}
-        onChange={(e) => updateCount(question, optionKey, e.target.value)}
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+        value={getCount(question, index, optionKey, prefix)}
+        onChange={(e) => updateCount(question, index, optionKey, e.target.value, prefix, option, lineage)}
+        className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white ${className}`}
         placeholder="Count"
       />
     );
+
+    const renderOptionDetails = (optionKey, option = {}) => {
+      const fixedDefectType = option.defectType || option.defectDetail || '';
+      const fixedAssemblyProcess = option.assemblyProcess || question.assemblyProcess || '';
+      const detailLabel = textOf(question) || fixedDefectType || option.label || option.value || 'Defect detail';
+
+      if (isSubQuestion) return renderCountInput(optionKey, option);
+
+      return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          {detailLabel}
+        </div>
+        {renderCountInput(optionKey, option)}
+      </div>
+    );
+    };
+
+    const renderChildQuestions = (option, optionKey) => {
+      const childQuestions = option.subQuestions || [];
+      if (!childQuestions.length || !selected.includes(optionKey)) return null;
+      return (
+        <div className="mt-3 space-y-3 border-l-2 border-blue-200 pl-4 dark:border-blue-900">
+          {childQuestions.map((subQuestion, subIndex) =>
+            renderQuestion(subQuestion, subIndex, level + 1, `${questionId}-${optionKey}`, option.label || option.value, {
+              rootQuestion: lineage.rootQuestion || textOf(question),
+              parentOption: lineage.parentOption || option.label || option.value || optionKey,
+              subQuestion: level === 0 ? textOf(subQuestion) : lineage.subQuestion,
+              subOption: level > 0 ? option.label || option.value || optionKey : lineage.subOption
+            })
+          )}
+        </div>
+      );
+    };
 
     return (
       <div
@@ -140,11 +197,12 @@ const QuestionCountGrid = ({ forms = [], values, onChange }) => {
                     />
                     <div className="flex-1">
                       <div className="font-medium">{option.label || option.value}</div>
-                      {checked && (
+                      {checked && !(option.subQuestions || []).length && (
                         <div className="mt-2">
-                          {renderCountInput(optionKey)}
+                          {renderOptionDetails(optionKey, option)}
                         </div>
                       )}
+                      {renderChildQuestions(option, optionKey)}
                     </div>
                   </label>
                 </div>
@@ -170,11 +228,12 @@ const QuestionCountGrid = ({ forms = [], values, onChange }) => {
                     />
                     <div className="flex-1">
                       <div className="font-medium">{option.label || option.value}</div>
-                      {checked && (
+                      {checked && !(option.subQuestions || []).length && (
                         <div className="mt-2">
-                          {renderCountInput(optionKey)}
+                          {renderOptionDetails(optionKey, option)}
                         </div>
                       )}
+                      {renderChildQuestions(option, optionKey)}
                     </div>
                   </label>
                 </div>
@@ -200,13 +259,20 @@ const QuestionCountGrid = ({ forms = [], values, onChange }) => {
                 );
               })}
             </select>
-            {selected[0] && renderCountInput(selected[0])}
+            {selected[0] && (() => {
+              const selectedOption = options.find((option) => optionValue(option) === selected[0]) || {};
+              return (selectedOption.subQuestions || []).length
+                ? renderChildQuestions(selectedOption, selected[0])
+                : renderOptionDetails(selected[0], selectedOption);
+            })()}
           </div>
         )}
 
         {!hasOptions && (
           <div className="space-y-3">
-            {isTextArea ? (
+            {isSubQuestion ? (
+              renderCountInput(RESPONSE_COUNT_KEY)
+            ) : isTextArea ? (
               <textarea
                 value={value}
                 onChange={(e) => update(question, index, e.target.value, prefix)}
@@ -221,7 +287,7 @@ const QuestionCountGrid = ({ forms = [], values, onChange }) => {
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-white"
               />
             )}
-            {renderCountInput(RESPONSE_COUNT_KEY)}
+            {!isSubQuestion && renderOptionDetails(RESPONSE_COUNT_KEY)}
           </div>
         )}
       </div>
@@ -248,4 +314,3 @@ const QuestionCountGrid = ({ forms = [], values, onChange }) => {
 };
 
 export default QuestionCountGrid;
-

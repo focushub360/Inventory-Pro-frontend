@@ -1,6 +1,7 @@
 import axios from 'axios';
-
-const API_URL = "https://inventory-pro-backend-gm00.onrender.com/api";
+const API_URL = "https://inventory-pro-backend-1.onrender.com/api";
+//const API_URL = "http://localhost:5000/api";
+//const API_URL = "https://inventory-management-backend-k76m.onrender.com/api";
 // Create axios instance
 export const api = axios.create({
   baseURL: API_URL,
@@ -110,6 +111,15 @@ export const productAPI = {
   updateSubcategory: (id, data) => api.put('/products/subcategories/' + id, data),
   deleteSubcategory: (id) => api.delete('/products/subcategories/' + id),
   getProductAnalytics: (id) => api.get(`/products/${id}/analytics`),
+};
+
+export const roleAPI = {
+  getAll: () => api.get('/roles'),
+  getById: (id) => api.get(`/roles/${id}`),
+  getPermissionTree: () => api.get('/roles/permission-tree'),
+  create: (data) => api.post('/roles', data),
+  update: (id, data) => api.put(`/roles/${id}`, data),
+  delete: (id) => api.delete(`/roles/${id}`),
 };
 
 // Brand & Model APIs
@@ -300,7 +310,27 @@ export const inspectionAPI = {
   getAdminTraceability: (id) => api.get(`/inspection/admin/traceability/${id}`),
   getAdminResponses: (params) => api.get('/inspection/admin/responses', { params }),
   getProductionAnalytics: () => api.get('/inspection/admin/production-analytics'),
+  getMisDashboard: (params) => api.get('/inspection/admin/mis-dashboard', { params }),
+  getMisTaxonomy: () => api.get('/inspection/admin/mis-dashboard/taxonomy'),
+  syncMisTaxonomy: () => api.post('/inspection/admin/mis-dashboard/sync-taxonomy'),
   getAdminResponseById: (id) => api.get(`/inspection/admin/responses/${id}`)
+};
+
+export const misOperationsAPI = {
+  getBopReceipts: (params) => api.get('/mis-operations/bop-receipts', { params }),
+  createBopReceipt: (data) => api.post('/mis-operations/bop-receipts', data),
+  updateBopReceipt: (id, data) => api.put(`/mis-operations/bop-receipts/${id}`, data),
+  deleteBopReceipt: (id) => api.delete(`/mis-operations/bop-receipts/${id}`),
+  getSupplierRejections: (params) => api.get('/mis-operations/supplier-rejections', { params }),
+  createSupplierRejection: (data) => api.post('/mis-operations/supplier-rejections', data),
+  updateSupplierRejection: (id, data) => api.put(`/mis-operations/supplier-rejections/${id}`, data),
+  deleteSupplierRejection: (id) => api.delete(`/mis-operations/supplier-rejections/${id}`),
+  getShellMouldingInspections: (params) => api.get('/mis-operations/shell-moulding-inspections', { params }),
+  saveShellMouldingInspection: (data) => api.post('/mis-operations/shell-moulding-inspections', data),
+  getVisorPdiirInspections: (params) => api.get('/mis-operations/visor-pdiir-inspections', { params }),
+  saveVisorPdiirInspection: (data) => api.post('/mis-operations/visor-pdiir-inspections', data),
+  getEmployeeSheetEntries: (params) => api.get('/mis-operations/employee-sheet-entries', { params }),
+  saveEmployeeSheetEntry: (data) => api.post('/mis-operations/employee-sheet-entries', data)
 };
 
 // Assembly APIs
@@ -315,7 +345,3 @@ export const assemblyAPI = {
 };
 
 export default api;
-
-
-
-
